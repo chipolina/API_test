@@ -1,4 +1,6 @@
 import json
+import os
+
 import pytest
 
 data = {"name": "Test",
@@ -20,6 +22,7 @@ def test_get_characters(ivi_api):
     :type ivi_api: функция
     """
     try:
+        print(os.getenv('LOG'))
         r = ivi_api.get('/characters')
         r_len = len(r.json()["result"])
         assert r.status_code == 200, f'Ошибка, код ответа = {r.status_code}, а не 200'
@@ -32,6 +35,7 @@ def test_get_characters(ivi_api):
 @pytest.mark.parametrize("name, code", [("Avalanche", 200),
                                         ("Ben Parker", 200),
                                         ("BenParker", 400),
+                                        ("Ben_Parker", 400),
                                         ("mark", 400)])
 def test_get_character_by_name(ivi_api, name, code):
     """

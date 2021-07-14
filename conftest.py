@@ -11,8 +11,8 @@ import os
 # print(argv)
 # for i in sys.argv:
 #     print(i)
-log = os.getenv('LOG')
-pas = os.getenv('PAS')
+# log = os.getenv('LOG')
+# pas = os.getenv('PAS')
 
 
 @pytest.fixture()
@@ -83,7 +83,7 @@ class ApiClient:
         :type headers: str
         """
         url = f"{self.base_url}{path}"
-        return requests.post(url=url, auth=('suddenig@gmail.com', 'APZrVp83vFNk5F'),
+        return requests.post(url=url, auth=(os.getenv('LOG'), os.getenv('PAS')),
                              json=json,
                              headers=headers)
 
@@ -101,7 +101,7 @@ class ApiClient:
         :type headers: str
         """
         url = f"{self.base_url}{path}"
-        return requests.put(url=url, auth=('suddenig@gmail.com', 'APZrVp83vFNk5F'),
+        return requests.put(url=url, auth=(os.getenv('LOG'), os.getenv('PAS')),
                             json=json,
                             headers=headers)
 
@@ -119,4 +119,4 @@ class ApiClient:
         :type headers: str
         """
         url = f"{self.base_url}{path}"
-        return requests.delete(url=url, auth=('suddenig@gmail.com', 'APZrVp83vFNk5F'), params=params, headers=headers)
+        return requests.delete(url=url, auth=(os.getenv('LOG'), os.getenv('PAS')), params=params, headers=headers)
