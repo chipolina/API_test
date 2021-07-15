@@ -3,9 +3,6 @@ import pytest
 import os
 
 
-
-
-
 @pytest.fixture()
 def ivi_api():
     """
