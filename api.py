@@ -39,7 +39,6 @@ def test_get_characters(ivi_api):
     :type ivi_api: функция
     """
     try:
-        print(os.getenv('LOG'))
         r = ivi_api.get('/characters')
         r_len = len(r.json()["result"])
         assert r.status_code == 200, f'Ошибка, код ответа = {r.status_code}, а не 200'
@@ -110,7 +109,6 @@ def test_post_create_character(ivi_api, name, universe, education, weight, heigh
                            "height": height,
                            "identity": identity})
     r_get = ivi_api.get('/characters')
-    print(r.json())
     assert len(r_get.json()['result']) < 500, "Достигнуто ограничение на количество персонажей. Максимальнок количество - 500 "
     assert r.status_code == 200, f'Ошибка, код ответа = {r.status_code}, а не 200. Текст ошибки: {r.json()["error"]}'
 
@@ -124,7 +122,6 @@ def test_post_create_character_wrong_headers(ivi_api):
     :type ivi_api: функция
     """
     r = ivi_api.post('/character', headers={'Content-type': 'application'}, json=data)
-    print(r.json())
     assert r.status_code == 400, f'Ошибка, код ответа = {r.status_code}, а не 400.'
 
 
@@ -179,7 +176,6 @@ def test_post_create_character_errors(ivi_api, name, universe, education, weight
                            "weight": weight,
                            "height": height,
                            "identity": identity})
-    print(r.json())
     assert r.status_code == code
     assert r.json()['error'] == err
 
@@ -208,9 +204,11 @@ def test_del_new_character(ivi_api, name, text, code):
                            "identity": "Publicly known"})
     assert r.status_code == code
     r_del = ivi_api.delete('/character', params={"name": name})
-    print(r_del.json())
+    r_get = ivi_api.get('/character', params={"name": {name}})
     assert r_del.status_code == code, f"Ошибка в выполнении запроса. {r_del.json()}"
     assert r_del.json() == text
+    assert r_get.status_code == 400
+    assert r_get.json() == {'error': 'No such name'}
 
 
 def test_del_unknown_character(ivi_api):
@@ -222,7 +220,6 @@ def test_del_unknown_character(ivi_api):
     :type ivi_api: функция
     """
     r = ivi_api.delete('/character', params={"name": 'Vovan'})
-    print(r.json())
     assert r.json()['error'] == 'No such name'
 
 
