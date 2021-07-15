@@ -15,7 +15,7 @@ def long_name(len):
     :return: сгенерированная строка
     :rtype: str
     """
-    letters = string.ascii_lowercase
+    letters = string.ascii_letters
     rand_string = ''.join(random.choice(letters) for i in range(len))
     return rand_string
 
