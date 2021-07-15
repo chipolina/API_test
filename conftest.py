@@ -1,18 +1,9 @@
-# import sys
 import requests
 import pytest
 import os
 
-# from sys import argv
 
 
-# xz, file, login, password= argv
-# r = requests.get(url + '/characters', auth=(login, password))
-# print(argv)
-# for i in sys.argv:
-#     print(i)
-# log = os.getenv('LOG')
-# pas = os.getenv('PAS')
 
 
 @pytest.fixture()
@@ -40,6 +31,8 @@ def reset(ivi_api):
     :rtype:
     """
     return ivi_api.post('/reset')
+
+
 class ApiClient:
 
     def __init__(self, base_url):

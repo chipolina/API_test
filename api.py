@@ -1,7 +1,24 @@
 import json
 import os
-
 import pytest
+import string
+import random
+
+
+def long_name(len):
+    """
+    Функция генерит и возвращает случайную строку определнной длины, передааемой параметров в функцию.
+
+
+    :param len: Длина строка
+    :type len: int
+    :return: сгенерированная строка
+    :rtype: str
+    """
+    letters = string.ascii_lowercase
+    rand_string = ''.join(random.choice(letters) for i in range(len))
+    return rand_string
+
 
 data = {"name": "Test",
         "universe": "Marvel Universe",
@@ -55,7 +72,29 @@ def test_get_character_by_name(ivi_api, name, code):
     assert r.status_code == code
 
 
-def test_post_create_character(ivi_api):
+@pytest.mark.parametrize('name, universe,education, weight, height, identity, code',
+                         [(long_name(1), 'test', 'Moscow', 140, 30, 'someone', 200),
+                          (long_name(2), 'test', 'Moscow', 140, 30, 'someone', 200),
+                          (long_name(349), 'test', 'Moscow', 140, 30, 'someone', 200),
+                          (long_name(350), 'test', 'Moscow', 140, 30, 'someone', 200),
+                          ('test', long_name(1), 'Moscow', 140, 30, 'someone', 200),
+                          ('test', long_name(2), 'Moscow', 140, 30, 'someone', 200),
+                          ('test', long_name(349), 'Moscow', 140, 30, 'someone', 200),
+                          ('test', long_name(350), 'Moscow', 140, 30, 'someone', 200),
+                          ('test', 'test', long_name(1), 140, 30, 'someone', 200),
+                          ('test', 'test', long_name(2), 140, 30, 'someone', 200),
+                          ('test', 'test', long_name(349), 140, 30, 'someone', 200),
+                          ('test', 'test', long_name(350), 140, 30, 'someone', 200),
+                          ('test', 'test', 'Moscow', 140, 30, long_name(1), 200),
+                          ('test', 'test', 'Moscow', 140, 30, long_name(2), 200),
+                          ('test', 'test', 'Moscow', 140, 30, long_name(349), 200),
+                          ('test', 'test', 'Moscow', 140, 30, long_name(350), 200),
+                          ('test', 'test', 'Moscow', 0, 30, 'Moscow', 200),
+                          ('test', 'test', 'Moscow', -10, 30, 'Moscow', 200),
+                          ('test', 'test', 'Moscow', 140, 0, 'Moscow', 200),
+                          ('test', 'test', 'Moscow', 140, -20, 'Moscow', 200),
+                          ])
+def test_post_create_character(ivi_api, name, universe, education, weight, height, identity, code):
     """
     Создаем нового персонажа методом POST, передаем хедер. Далее проверяем кол-во записей в БД так как не может быть больше 500 и код ответа. В случае ошибок выводится соответствующий текст
 
@@ -64,8 +103,14 @@ def test_post_create_character(ivi_api):
     :type ivi_api: функция
     """
     r = ivi_api.post('/character', headers={'Content-type': 'application/json'},
-                     json=data)
+                     json={"name": name,
+                           "universe": universe,
+                           "education": education,
+                           "weight": weight,
+                           "height": height,
+                           "identity": identity})
     r_get = ivi_api.get('/characters')
+    print(r.json())
     assert len(r_get.json()['result']) < 500, "Достигнуто ограничение на количество персонажей. Максимальнок количество - 500 "
     assert r.status_code == 200, f'Ошибка, код ответа = {r.status_code}, а не 200. Текст ошибки: {r.json()["error"]}'
 
@@ -79,21 +124,30 @@ def test_post_create_character_wrong_headers(ivi_api):
     :type ivi_api: функция
     """
     r = ivi_api.post('/character', headers={'Content-type': 'application'}, json=data)
+    print(r.json())
     assert r.status_code == 400, f'Ошибка, код ответа = {r.status_code}, а не 400.'
 
 
-@pytest.mark.parametrize('name, universe,education, weight, height, identity, code, err',
+@pytest.mark.parametrize('name, universe, education, weight, height, identity, code, err',
                          [('', 'test', 'Moscow', 140, 30, 'someone', 400, "name: ['Length must be between 1 and 350.']"),
                           (666, 'test', 'Moscow', 140, 30, 'someone', 400, "name: ['Not a valid string.']"),
                           (None, 't', 'low', '123', 234, 'someone', 400, "name: ['Field may not be null.']"),
+                          (long_name(351), 't', 'low', '123', 234, 'someone', 400, "name: ['Length must be between 1 and 350.']"),
+                          ('test', '', 'Moscow', 140, 30, 'someone', 400, "universe: ['Length must be between 1 and 350.']"),
+                          ('test', 666, 'Moscow', 140, 30, 'someone', 400, "universe: ['Not a valid string.']"),
+                          ('test', None, 'low', '123', 234, 'someone', 400, "universe: ['Field may not be null.']"),
+                          ('test', long_name(351), 'low', '123', 234, 'someone', 400, "universe: ['Length must be between 1 and 350.']"),
+                          ('test', 'test', '', 140, 30, 'someone', 400, "education: ['Length must be between 1 and 350.']"),
+                          ('test', 'test', 666, 140, 30, 'someone', 400, "education: ['Not a valid string.']"),
+                          ('test', 'test', None, '123', 234, 'someone', 400, "education: ['Field may not be null.']"),
+                          ('test', 'test', long_name(351), '123', 234, 'someone', 400, "education: ['Length must be between 1 and 350.']"),
+                          ('test', 'test', 'test', 140, 30, '', 400, "identity: ['Length must be between 1 and 350.']"),
+                          ('test', 'test', 'test', 140, 30, 666, 400, "identity: ['Not a valid string.']"),
+                          ('test', 'test', 'test', '123', 234, None, 400, "identity: ['Field may not be null.']"),
+                          ('test', 'test', 'test', '123', 234, long_name(351), 400, "identity: ['Length must be between 1 and 350.']"),
                           ('test', 't', 'low', '', 234, 'someone', 400, "weight: ['Not a valid number.']"),
-                          ('test', 't', '', '123', 234, 'someone', 400, "education: ['Length must be between 1 and 350.']"),
-                          ('test', 't', 312, '123', 234, 'someone', 400, "education: ['Not a valid string.']"),
                           ('test', 't', 'low', '123', '', 'someone', 400, "height: ['Not a valid number.']"),
-                          ('test', '', 'low', '123', '123', 'someone', 400, "universe: ['Length must be between 1 and 350.']"),
-                          ('test', 123, 'low', '123', '123', 'someone', 400, "universe: ['Not a valid string.']"),
-                          ('test', 't', 'low', '123', '123', '', 400, "identity: ['Length must be between 1 and 350.']"),
-                          ('test', 't', 'low', '123', '123', 666, 400, "identity: ['Not a valid string.']")])
+                          ])
 def test_post_create_character_errors(ivi_api, name, universe, education, weight, height, identity, code, err):
     """
     Отправляем запросы, которые возвращают ошибки. Проверяем код ответа и совпадает ли текст ошибок, которые мы получаем в ответе.
