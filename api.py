@@ -1,8 +1,8 @@
 import json
-import os
 import pytest
 import string
 import random
+import allure
 
 
 def long_name(len):
@@ -28,6 +28,8 @@ data = {"name": "Test",
         "identity": "Publicly known"}
 
 
+@allure.feature('Запрос записей из БД')
+@allure.story('Получение всех записей из БД')
 def test_get_characters(ivi_api):
     """
     Отправляем запрос на получение всех записей по персонажам.
@@ -39,15 +41,21 @@ def test_get_characters(ivi_api):
     :type ivi_api: функция
     """
     try:
-        r = ivi_api.get('/characters')
-        r_len = len(r.json()["result"])
-        assert r.status_code == 200, f'Ошибка, код ответа = {r.status_code}, а не 200'
-        assert r_len != None, f"Ошибка, длина записи 'result' должно быть больше 0. Текущая длина записи {r_len}"
-        assert r.json()['result'][0]['name'] != None, "Ошибка, отсутствует поле Name в выдаче"
+        with allure.step('Отправили GET запрос'):
+            r = ivi_api.get('/characters')
+            r_len = len(r.json()["result"])
+        with allure.step('Проверяем код ответа'):
+            assert r.status_code == 200, f'Ошибка, код ответа = {r.status_code}, а не 200'
+        with allure.step('Проверяем кол-во записей'):
+            assert r_len != None, f"Ошибка, длина записи 'result' должно быть больше 0. Текущая длина записи {r_len}"
+        with allure.step('Проверяем есть ли поле "name" в первой записи'):
+            assert r.json()['result'][0]['name'] != None, "Ошибка, отсутствует поле Name в выдаче"
     except json.decoder.JSONDecodeError:
         raise ValueError(f"Ошибка в URL строке: {r.url}")
 
 
+@allure.feature('Запрос записей из БД')
+@allure.story('Получение записи из БД по имени')
 @pytest.mark.parametrize("name, code", [("Avalanche", 200),
                                         ("Ben Parker", 200),
                                         ("BenParker", 400),
@@ -67,10 +75,15 @@ def test_get_character_by_name(ivi_api, name, code):
     :param code: передаем ожидаемый код ответа
     :type code: integer
     """
-    r = ivi_api.get('/character', params={"name": {name}})
-    assert r.status_code == code
+
+    with allure.step('Отправляем GET запрос на сервер'):
+        r = ivi_api.get('/character', params={"name": {name}})
+    with allure.step('Проверяем код ответа'):
+        assert r.status_code == code
 
 
+@allure.feature('Создание записи в БД')
+@allure.story('Успешное создание новой записи, испульзуя различные кейсы проверки полей')
 @pytest.mark.parametrize('name, universe,education, weight, height, identity, code',
                          [(long_name(1), 'test', 'Moscow', 140, 30, 'someone', 200),
                           (long_name(2), 'test', 'Moscow', 140, 30, 'someone', 200),
@@ -101,18 +114,24 @@ def test_post_create_character(ivi_api, name, universe, education, weight, heigh
     :param ivi_api: фикстура из файла conftest.py, срабатывающая на каждый запуск теста. В параметрах записывается end point
     :type ivi_api: функция
     """
-    r = ivi_api.post('/character', headers={'Content-type': 'application/json'},
-                     json={"name": name,
-                           "universe": universe,
-                           "education": education,
-                           "weight": weight,
-                           "height": height,
-                           "identity": identity})
-    r_get = ivi_api.get('/characters')
-    assert len(r_get.json()['result']) < 500, "Достигнуто ограничение на количество персонажей. Максимальнок количество - 500 "
-    assert r.status_code == 200, f'Ошибка, код ответа = {r.status_code}, а не 200. Текст ошибки: {r.json()["error"]}'
+    with allure.step('Отправляем POST запрос на сервер и передаем данные из маркировки Parametrize'):
+        r = ivi_api.post('/character', headers={'Content-type': 'application/json'},
+                         json={"name": name,
+                               "universe": universe,
+                               "education": education,
+                               "weight": weight,
+                               "height": height,
+                               "identity": identity})
+    with allure.step('Отправляем GET запрос на сервер'):
+        r_get = ivi_api.get('/characters')
+    with allure.step('Проверяем кол-во записей на сервере. Должно быть не более 500 шт'):
+        assert len(r_get.json()['result']) < 500, "Достигнуто ограничение на количество персонажей. Максимальнок количество - 500 "
+    with allure.step('Проверяем код овтета POST запроса'):
+        assert r.status_code == 200, f'Ошибка, код ответа = {r.status_code}, а не 200. Текст ошибки: {r.json()["error"]}'
 
 
+@allure.feature('Создание записи в БД')
+@allure.story('Неуспешное создание записи при передаче неправильного headers')
 def test_post_create_character_wrong_headers(ivi_api):
     """
     Отправляем запрос с неправильных хедером и ожидаем код ответа 400
@@ -121,10 +140,14 @@ def test_post_create_character_wrong_headers(ivi_api):
     :param ivi_api: фикстура из файла conftest.py, срабатывающая на каждый запуск теста. В параметрах записывается end point
     :type ivi_api: функция
     """
-    r = ivi_api.post('/character', headers={'Content-type': 'application'}, json=data)
-    assert r.status_code == 400, f'Ошибка, код ответа = {r.status_code}, а не 400.'
+    with allure.step('Отправялем POST запрос с неправильных headers'):
+        r = ivi_api.post('/character', headers={'Content-type': 'application'}, json=data)
+    with allure.step('Проверяем код ответа. Код должен быть 400'):
+        assert r.status_code == 400, f'Ошибка, код ответа = {r.status_code}, а не 400.'
 
 
+@allure.feature('Создание записи в БД')
+@allure.story('Неуспешное создание новой записи, испульзуя различные кейсы проверки полей')
 @pytest.mark.parametrize('name, universe, education, weight, height, identity, code, err',
                          [('', 'test', 'Moscow', 140, 30, 'someone', 400, "name: ['Length must be between 1 and 350.']"),
                           (666, 'test', 'Moscow', 140, 30, 'someone', 400, "name: ['Not a valid string.']"),
@@ -169,17 +192,22 @@ def test_post_create_character_errors(ivi_api, name, universe, education, weight
     :param err: текст ошибки
     :type err: str
     """
-    r = ivi_api.post('/character', headers={'Content-type': 'application/json'},
-                     json={"name": name,
-                           "universe": universe,
-                           "education": education,
-                           "weight": weight,
-                           "height": height,
-                           "identity": identity})
-    assert r.status_code == code
-    assert r.json()['error'] == err
+    with allure.step('Отправляем POST запрос на сервер и передаем данные из маркировки Parametrize'):
+        r = ivi_api.post('/character', headers={'Content-type': 'application/json'},
+                         json={"name": name,
+                               "universe": universe,
+                               "education": education,
+                               "weight": weight,
+                               "height": height,
+                               "identity": identity})
+    with allure.step('Проверяем код ответа'):
+        assert r.status_code == code
+    with allure.step('Проверяем текст ошибки'):
+        assert r.json()['error'] == err
 
 
+@allure.feature('Удаление записи из БД')
+@allure.story('Удаление созданой новой записи, испульзуя различные кейсы')
 @pytest.mark.parametrize('name, text, code', [('Optimus', {'result': 'Hero Optimus is deleted'}, 200),
                                               ('Optimus Prime', {'result': 'Hero Optimus Prime is deleted'}, 200)])
 def test_del_new_character(ivi_api, name, text, code):
@@ -195,22 +223,32 @@ def test_del_new_character(ivi_api, name, text, code):
     :param code: код ответа
     :type code: int
     """
-    r = ivi_api.post('/character', headers={'Content-type': 'application/json'},
-                     json={"name": name,
-                           "universe": "Marvel Universe",
-                           "education": "High school (unfinished)",
-                           "weight": 104,
-                           "height": 1.90,
-                           "identity": "Publicly known"})
-    assert r.status_code == code
-    r_del = ivi_api.delete('/character', params={"name": name})
-    r_get = ivi_api.get('/character', params={"name": {name}})
-    assert r_del.status_code == code, f"Ошибка в выполнении запроса. {r_del.json()}"
-    assert r_del.json() == text
-    assert r_get.status_code == 400
-    assert r_get.json() == {'error': 'No such name'}
+    with allure.step('Создаем запись, отправляем POST запрос на сервер'):
+        r = ivi_api.post('/character', headers={'Content-type': 'application/json'},
+                         json={"name": name,
+                               "universe": "Marvel Universe",
+                               "education": "High school (unfinished)",
+                               "weight": 104,
+                               "height": 1.90,
+                               "identity": "Publicly known"})
+    with allure.step('Проверяем код ответа создания записи'):
+        assert r.status_code == code
+    with allure.step('Отправляем DELETE запрос на сервер и передаем имя созданной записи'):
+        r_del = ivi_api.delete('/character', params={"name": name})
+    with allure.step('Проверяем код ответа DELETE запроса'):
+        assert r_del.status_code == code, f"Ошибка в выполнении запроса. {r_del.json()}"
+    with allure.step('Проверяем текст ответа записи, должен совпадать с шаблоном'):
+        assert r_del.json() == text
+    with allure.step('Отправляем GET запрос на сервер c именем удаленной записи'):
+        r_get = ivi_api.get('/character', params={"name": {name}})
+    with allure.step('Проверяем код ответа GET запроса, должен быть 400'):
+        assert r_get.status_code == 400
+    with allure.step('Отправляем GET запрос на сервер c именем удаленной записи, получаем текст ошибки'):
+        assert r_get.json() == {'error': 'No such name'}
 
 
+@allure.feature('Удаление записи из БД')
+@allure.story('Удаление несуществующей записи')
 def test_del_unknown_character(ivi_api):
     """
     Удаляем персонажа, которого нет в БД. Проверяем совпадает ли текст ошибки
@@ -219,10 +257,17 @@ def test_del_unknown_character(ivi_api):
     :param ivi_api: фикстура из файла conftest.py, срабатывающая на каждый запуск теста. В параметрах записывается end point
     :type ivi_api: функция
     """
-    r = ivi_api.delete('/character', params={"name": 'Vovan'})
-    assert r.json()['error'] == 'No such name'
+
+    with allure.step('Отправляем DELETE запрос на сервер и передаем имя несуществующей записи'):
+        r = ivi_api.delete('/character', params={"name": 'Vovan'})
+    with allure.step('Проверяем код ответа'):
+        assert r.status_code == 400
+    with allure.step('Проверяем текст ответа'):
+        assert r.json()['error'] == 'No such name'
 
 
+@allure.feature('Изменение записи в БД')
+@allure.story('Создание и изменение записи')
 @pytest.mark.parametrize('name, num', [('New Guy', 140)])
 def test_put_update_character(ivi_api, name, num):
     f"""
@@ -242,29 +287,37 @@ def test_put_update_character(ivi_api, name, num):
     :param num: 
     :type num: 
     """
-    ivi_api.post('/character', headers={'Content-type': 'application/json'},
-                 json={"name": name,
-                       "universe": "Marvel Universe",
-                       "education": "High school (unfinished)",
-                       "weight": 104,
-                       "height": 1.90,
-                       "identity": "Publicly known"})
-
-    r = ivi_api.get('/character', params={"name": name})
-    assert r.status_code == 200
-    assert r.json()['result']['name'] == name
-    assert r.json()['result']['weight'] == 104
-
-    ivi_api.put('/character', headers={'Content-type': 'application/json'},
-                json={"name": name,
-                      "universe": "Marvel Universe",
-                      "education": "High school (unfinished)",
-                      "weight": num,
-                      "height": 1.90,
-                      "identity": "Publicly known"})
-    assert r.status_code == 200
-
-    r = ivi_api.get('/character', params={"name": name})
-    assert r.status_code == 200
-    assert r.json()['result']['name'] == name
-    assert r.json()['result']['weight'] == num
+    with allure.step('Создаем запись, отправляя POST запрос на сервер'):
+        ivi_api.post('/character', headers={'Content-type': 'application/json'},
+                     json={"name": name,
+                           "universe": "Marvel Universe",
+                           "education": "High school (unfinished)",
+                           "weight": 104,
+                           "height": 1.90,
+                           "identity": "Publicly known"})
+    with allure.step('Отправляем GET запрос на сервер с созданным именем'):
+        r = ivi_api.get('/character', params={"name": name})
+    with allure.step('Проверяем код ответа GET запроса'):
+        assert r.status_code == 200
+    with allure.step('Проверяем значение "name" в полученной записи'):
+        assert r.json()['result']['name'] == name
+    with allure.step('Проверяем значение "weight" в полученной записи'):
+        assert r.json()['result']['weight'] == 104
+    with allure.step('Отправляем PUT запрос на сервер с существующем именем и новым значением "weight"'):
+        ivi_api.put('/character', headers={'Content-type': 'application/json'},
+                    json={"name": name,
+                          "universe": "Marvel Universe",
+                          "education": "High school (unfinished)",
+                          "weight": num,
+                          "height": 1.90,
+                          "identity": "Publicly known"})
+    with allure.step('Проверяем код ответа PUT запроса'):
+        assert r.status_code == 200
+    with allure.step('Отправляем GET запрос на сервер с тем же именем'):
+        r = ivi_api.get('/character', params={"name": name})
+    with allure.step('Проверяем код ответа GET запроса'):
+        assert r.status_code == 200
+    with allure.step('Проверяем значение "name" в полученной записи'):
+        assert r.json()['result']['name'] == name
+    with allure.step('Проверяем значение "weight" в полученной записи. Должно измениться на новое значение'):
+        assert r.json()['result']['weight'] == num
