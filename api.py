@@ -126,7 +126,6 @@ def test_post_create_character(ivi_api, name, universe, education, weight, heigh
                                "weight": weight,
                                "height": height,
                                "identity": identity})
-    print(r.json())
     with allure.step('Отправляем GET запрос на сервер'):
         r_get = ivi_api.get('/characters')
     with allure.step('Проверяем кол-во записей на сервере. Должно быть не более 500 шт'):
