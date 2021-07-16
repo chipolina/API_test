@@ -3,6 +3,8 @@ import pytest
 import string
 import random
 import allure
+from jsonschema import validate
+from Schemas import *
 
 
 def long_name(len):
@@ -43,7 +45,9 @@ def test_get_characters(ivi_api):
     try:
         with allure.step('Отправили GET запрос'):
             r = ivi_api.get('/characters')
-            r_len = len(r.json()["result"])
+        r_len = len(r.json()["result"])
+        with allure.step('Проверяем соответствует ли JSON ответа JSONSchema ответа'):
+            validate(instance=r.json()['result'][0], schema=Getschema.schema_get_char())
         with allure.step('Проверяем код ответа'):
             assert r.status_code == 200, f'Ошибка, код ответа = {r.status_code}, а не 200'
         with allure.step('Проверяем кол-во записей'):
@@ -122,12 +126,15 @@ def test_post_create_character(ivi_api, name, universe, education, weight, heigh
                                "weight": weight,
                                "height": height,
                                "identity": identity})
+    print(r.json())
     with allure.step('Отправляем GET запрос на сервер'):
         r_get = ivi_api.get('/characters')
     with allure.step('Проверяем кол-во записей на сервере. Должно быть не более 500 шт'):
         assert len(r_get.json()['result']) < 500, "Достигнуто ограничение на количество персонажей. Максимальнок количество - 500 "
-    with allure.step('Проверяем код овтета POST запроса'):
+    with allure.step('Проверяем код ответа POST запроса'):
         assert r.status_code == 200, f'Ошибка, код ответа = {r.status_code}, а не 200. Текст ошибки: {r.json()["error"]}'
+    with allure.step('Проверяем соответствует ли JSON ответа JSONSchema ответа'):
+        validate(instance=r.json(), schema=Getschema.schema_create_char())
 
 
 @allure.feature('Создание записи в БД')
@@ -304,13 +311,15 @@ def test_put_update_character(ivi_api, name, num):
     with allure.step('Проверяем значение "weight" в полученной записи'):
         assert r.json()['result']['weight'] == 104
     with allure.step('Отправляем PUT запрос на сервер с существующем именем и новым значением "weight"'):
-        ivi_api.put('/character', headers={'Content-type': 'application/json'},
-                    json={"name": name,
-                          "universe": "Marvel Universe",
-                          "education": "High school (unfinished)",
-                          "weight": num,
-                          "height": 1.90,
-                          "identity": "Publicly known"})
+        r_put = ivi_api.put('/character', headers={'Content-type': 'application/json'},
+                            json={"name": name,
+                                  "universe": "Marvel Universe",
+                                  "education": "High school (unfinished)",
+                                  "weight": num,
+                                  "height": 1.90,
+                                  "identity": "Publicly known"})
+    with allure.step('Проверяем соответствует ли JSON ответа JSONSchema ответа'):
+        validate(instance=r_put.json(), schema=Getschema.schema_update_char())
     with allure.step('Проверяем код ответа PUT запроса'):
         assert r.status_code == 200
     with allure.step('Отправляем GET запрос на сервер с тем же именем'):
