@@ -4,7 +4,7 @@ import os
 
 
 @pytest.fixture()
-def ivi_api():
+def api():
     """
     Возвращает объект, через который можно обращаться к методам GET, POST, PUT, DELETE
 
@@ -16,18 +16,18 @@ def ivi_api():
 
 
 @pytest.fixture(autouse=True)
-def reset(ivi_api):
+def reset(api):
     """
     Фикстура, которая возвращает изначальное состояние БД. Запускает при каждом вызове функции, чтобы тесты не зависели друг от друга.
     Взаимосвязь между разными методами вызовов (создание - изменение - удаление) работает исключительно в одном тесте
 
 
-    :param ivi_api:
-    :type ivi_api:
+    :param api:
+    :type api:
     :return:
     :rtype:
     """
-    return ivi_api.post('/reset')
+    return api.post('/reset')
 
 
 class ApiClient:
@@ -40,8 +40,6 @@ class ApiClient:
         :rtype: object
         """
         self.base_url = base_url
-        # self.login = login
-        # self.password = password
 
     def get(self, path='/', params=None, headers=None):
         """
